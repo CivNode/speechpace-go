@@ -1,0 +1,27 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - run: go vet ./...
+      - run: go test -race -coverprofile=coverage.txt ./...
+      - name: No LLM dependencies
+        run: |
+          if grep -r -l -i "openai\|anthropic\|gemini\|claude\|llm" --include="*.go" .; then
+            echo "ERROR: LLM-related term found in Go source"
+            exit 1
+          fi
+          if grep -l -i "openai\|anthropic\|gemini\|claude\|llm" go.mod 2>/dev/null; then
+            echo "ERROR: LLM-related term found in go.mod"
+            exit 1
+          fi
+          if [ -f go.sum ] && grep -l -i "openai\|anthropic\|gemini\|claude\|llm" go.sum 2>/dev/null; then
+            echo "ERROR: LLM-related term found in go.sum"
+            exit 1
+          fi
+          echo "No LLM dependencies detected"
